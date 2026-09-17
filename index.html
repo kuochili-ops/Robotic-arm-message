@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>𓃥 白六機械手訊息傳遞</title>
     <!-- 引入中文字型 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&family=Noto+Serif+TC:wght@900&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
@@ -10,28 +10,30 @@
         body { margin: 0; overflow: hidden; background: #111; font-family: 'Noto Sans TC', sans-serif; touch-action: none; }
         canvas { display: block; }
 
-        /* 高清控制面板 container */
+        /* 控制面板 container */
         #panel-container {
             position: absolute;
-            top: 25px;
-            right: 25px;
+            top: 15px;
+            right: 15px;
             z-index: 20;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
+            max-width: calc(100vw - 30px);
         }
 
         #toggle-btn {
             background: #111;
             color: #0ff;
-            border: 3px solid #0ff;
-            padding: 16px 32px;
-            border-radius: 14px;
+            border: 2px solid #0ff;
+            padding: 10px 18px;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 22px;
+            font-size: 16px;
             font-weight: 900;
-            box-shadow: 0 6px 20px rgba(0,255,255,0.4);
+            box-shadow: 0 4px 15px rgba(0,255,255,0.4);
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         #toggle-btn:hover {
@@ -39,67 +41,84 @@
             color: #000;
         }
 
+        /* 增加 max-height 與 overflow-y，確保在小螢幕不被截斷 */
         #panel {
             display: none; /* 預設收合 */
             background: rgba(10, 10, 10, 0.96);
-            border: 3px solid rgba(0,255,255,0.8);
-            padding: 28px;
-            border-radius: 18px;
-            width: 85vw;
-            max-width: 440px;
-            margin-top: 15px;
+            border: 2px solid rgba(0,255,255,0.8);
+            padding: 16px;
+            border-radius: 14px;
+            width: 82vw;
+            max-width: 340px;
+            max-height: 70vh; /* 防遮擋關鍵：最多佔 70% 螢幕高度 */
+            overflow-y: auto;  /* 內容多時可自由滾動 */
+            margin-top: 10px;
             color: #fff;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.95);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.95);
+            box-sizing: border-box;
+        }
+
+        /* 美化滾動條 */
+        #panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        #panel::-webkit-scrollbar-thumb {
+            background: #0ff;
+            border-radius: 3px;
         }
 
         #panel label {
             display: block;
-            margin-top: 18px;
-            font-size: 20px;
+            margin-top: 10px;
+            font-size: 15px;
             font-weight: bold;
             color: #0ff;
         }
 
+        #panel label:first-child {
+            margin-top: 0;
+        }
+
         #panel textarea, #panel select, #panel input[type="color"] {
             width: 100%;
-            margin-top: 10px;
+            margin-top: 6px;
             background: #222;
             color: #fff;
-            border: 2px solid #555;
-            border-radius: 10px;
-            padding: 14px;
-            font-size: 20px;
+            border: 1.5px solid #555;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 15px;
             box-sizing: border-box;
             outline: none;
         }
 
         #panel textarea {
-            height: 120px;
-            font-size: 20px;
-            line-height: 1.5;
+            height: 80px;
+            font-size: 15px;
+            line-height: 1.4;
             resize: vertical;
         }
 
         #panel input[type="color"] {
-            height: 60px;
+            height: 42px;
             cursor: pointer;
-            padding: 6px;
+            padding: 4px;
         }
 
         .btn-group {
             display: flex;
-            gap: 14px;
-            margin-top: 24px;
+            gap: 10px;
+            margin-top: 14px;
         }
 
         .btn-group button {
             flex: 1;
-            padding: 16px;
+            padding: 10px;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 20px;
+            font-size: 15px;
             transition: transform 0.1s ease;
         }
 
@@ -386,7 +405,6 @@
             canvas.height = 256;
             const ctx = canvas.getContext('2d');
 
-            // 紙箱基底質感
             ctx.fillStyle = '#c89d6e';
             ctx.fillRect(0, 0, 256, 256);
 
@@ -395,17 +413,14 @@
                 ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
             }
 
-            // 【字體放大設定】：尺寸從 110px 提升至 180px 填滿盒面邊緣
             if (char) {
                 ctx.fillStyle = selectedColor;
                 ctx.font = `900 180px ${selectedFont}`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                // 128, 134 可完美置中大型字體
                 ctx.fillText(char, 128, 134);
             }
 
-            // 盒邊封條框
             ctx.strokeStyle = '#a67c52';
             ctx.lineWidth = 10;
             ctx.strokeRect(5, 5, 246, 246);
