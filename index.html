@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>𓃥 白六機械手訊息傳遞</title>
     <!-- 引入中文字型 -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700&family=Noto+Serif+TC:wght@700&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&family=Noto+Serif+TC:wght@900&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background: #111; font-family: 'Noto Sans TC', sans-serif; touch-action: none; }
         canvas { display: block; }
@@ -386,6 +386,7 @@
             canvas.height = 256;
             const ctx = canvas.getContext('2d');
 
+            // 紙箱基底質感
             ctx.fillStyle = '#c89d6e';
             ctx.fillRect(0, 0, 256, 256);
 
@@ -394,14 +395,17 @@
                 ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
             }
 
+            // 【字體放大設定】：尺寸從 110px 提升至 180px 填滿盒面邊緣
             if (char) {
                 ctx.fillStyle = selectedColor;
-                ctx.font = `bold 110px ${selectedFont}`;
+                ctx.font = `900 180px ${selectedFont}`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(char, 128, 128);
+                // 128, 134 可完美置中大型字體
+                ctx.fillText(char, 128, 134);
             }
 
+            // 盒邊封條框
             ctx.strokeStyle = '#a67c52';
             ctx.lineWidth = 10;
             ctx.strokeRect(5, 5, 246, 246);
@@ -515,7 +519,6 @@
 
             let angleShoulder = angleAlpha + angleBeta;
 
-            // 計算手腕補償旋轉（讓兩隻手指精準調整角度貼合字盒）
             let wristYawAngle = alignTargetYaw - baseAngle;
 
             return {
@@ -579,7 +582,6 @@
                 stateTimer += dt;
                 const hoverPos = targetSourcePos.clone().add(new THREE.Vector3(0, 1.0, 0));
                 
-                // 計算夾取角度補償 (讓手指旋轉與字盒夾角平行)
                 let ik = calculateVerticalIK(hoverPos, 0);
                 targetPose.base = ik.base;
                 targetPose.shoulder = ik.shoulder;
@@ -733,7 +735,6 @@
             shoulderGroup.rotation.x = armPose.shoulder;
             elbowGroup.rotation.x = armPose.elbow;
             
-            // X軸旋轉確保夾爪水平面向地面，Y軸旋轉讓手指動態轉向精準貼合字盒
             gripperGroup.rotation.x = - (armPose.shoulder + armPose.elbow) + 0.05;
             gripperGroup.rotation.y = armPose.wristYaw;
 
