@@ -41,7 +41,6 @@
             color: #000;
         }
 
-        /* 增加 max-height 與 overflow-y，確保在小螢幕不被截斷 */
         #panel {
             display: none; /* 預設收合 */
             background: rgba(10, 10, 10, 0.96);
@@ -50,15 +49,14 @@
             border-radius: 14px;
             width: 82vw;
             max-width: 340px;
-            max-height: 70vh; /* 防遮擋關鍵：最多佔 70% 螢幕高度 */
-            overflow-y: auto;  /* 內容多時可自由滾動 */
+            max-height: 70vh;
+            overflow-y: auto;
             margin-top: 10px;
             color: #fff;
             box-shadow: 0 8px 30px rgba(0,0,0,0.95);
             box-sizing: border-box;
         }
 
-        /* 美化滾動條 */
         #panel::-webkit-scrollbar {
             width: 6px;
         }
@@ -154,7 +152,7 @@
                 <button id="share-btn" onclick="shareURL()">分享 URL</button>
             </div>
             <div class="btn-group">
-                <button id="record-btn" onclick="toggleRecording()">🎥 開始錄影</button>
+                <button id="record-btn" onclick="toggleRecording()">🎥 開始自動錄影</button>
             </div>
         </div>
     </div>
@@ -281,13 +279,13 @@
         function toggleRecording() {
             const btn = document.getElementById('record-btn');
             if (!isRecording) {
+                // 重置從第一行重新開始，確保完整錄下整個過程
+                applySettings();
                 startRecording();
-                btn.innerText = '⏹️ 停止並下載錄影';
+                btn.innerText = '⏹️ 錄影中 (完成自動下載)';
                 btn.classList.add('recording');
             } else {
                 stopRecording();
-                btn.innerText = '🎥 開始錄影';
-                btn.classList.remove('recording');
             }
         }
 
@@ -308,6 +306,11 @@
                 a.download = `white6_arm_animation_${Date.now()}.webm`;
                 a.click();
                 URL.revokeObjectURL(url);
+                
+                const btn = document.getElementById('record-btn');
+                btn.innerText = '🎥 開始自動錄影';
+                btn.classList.remove('recording');
+                isRecording = false;
             };
 
             mediaRecorder.start();
@@ -317,7 +320,6 @@
         function stopRecording() {
             if (mediaRecorder && isRecording) {
                 mediaRecorder.stop();
-                isRecording = false;
             }
         }
 
@@ -711,9 +713,14 @@
             }
             else if (state === 'HOLD') {
                 stateTimer += dt;
-                if (stateTimer >= 1.0) {
+                if (stateTimer >= 1.0) { // 展現 1 秒後
                     stateTimer = 0;
                     state = 'CONVEYOR';
+
+                    // 【核心功能】：若正在錄影且這是最後一行文字，在此刻（顯示完成後一秒）自動停止並下載檔！
+                    if (isRecording && currentLineIndex === textLines.length - 1) {
+                        stopRecording();
+                    }
                 }
             }
             else if (state === 'CONVEYOR') {
