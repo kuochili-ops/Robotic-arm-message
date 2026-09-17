@@ -260,6 +260,7 @@
             state = 'INIT_LINE';
         }
 
+        // 強化版 URL 分享與全設備剪貼簿自動複製機制
         function shareURL() {
             const data = {
                 lines: textLines,
@@ -269,17 +270,39 @@
             const encoded = encodeURIComponent(btoa(JSON.stringify(data)));
             const shareableURL = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
             
-            navigator.clipboard.writeText(shareableURL).then(() => {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(shareableURL).then(() => {
+                    alert('已成功複製分享網址至剪貼簿！');
+                }).catch(() => {
+                    fallbackCopyText(shareableURL);
+                });
+            } else {
+                fallbackCopyText(shareableURL);
+            }
+        }
+
+        // 舊版與行動裝置瀏覽器備用複製機制
+        function fallbackCopyText(text) {
+            const tempArea = document.createElement('textarea');
+            tempArea.value = text;
+            tempArea.style.position = 'fixed';
+            tempArea.style.left = '-9999px';
+            document.body.appendChild(tempArea);
+            tempArea.focus();
+            tempArea.select();
+            
+            try {
+                document.execCommand('copy');
                 alert('已成功複製分享網址至剪貼簿！');
-            }).catch(() => {
-                prompt('請手動複製以下網址：', shareableURL);
-            });
+            } catch (err) {
+                prompt('請手動複製以下網址：', text);
+            }
+            document.body.removeChild(tempArea);
         }
 
         function toggleRecording() {
             const btn = document.getElementById('record-btn');
             if (!isRecording) {
-                // 重置從第一行重新開始，確保完整錄下整個過程
                 applySettings();
                 startRecording();
                 btn.innerText = '⏹️ 錄影中 (完成自動下載)';
@@ -713,11 +736,10 @@
             }
             else if (state === 'HOLD') {
                 stateTimer += dt;
-                if (stateTimer >= 1.0) { // 展現 1 秒後
+                if (stateTimer >= 1.0) {
                     stateTimer = 0;
                     state = 'CONVEYOR';
 
-                    // 【核心功能】：若正在錄影且這是最後一行文字，在此刻（顯示完成後一秒）自動停止並下載檔！
                     if (isRecording && currentLineIndex === textLines.length - 1) {
                         stopRecording();
                     }
