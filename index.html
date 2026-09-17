@@ -178,8 +178,8 @@
         const trayPosRight = new THREE.Vector3(2.20, -1.25, -3.15);
         const trayPosLeft = new THREE.Vector3(-2.20, -1.25, -3.15);
 
-        let armPose = { base: 0, shoulder: 0, elbow: 0, grip: 0.4 };
-        let targetPose = { base: 0, shoulder: 0, elbow: 0, grip: 0.4 };
+        let armPose = { base: 0, shoulder: 0, elbow: 0, wristYaw: 0, grip: 0.4 };
+        let targetPose = { base: 0, shoulder: 0, elbow: 0, wristYaw: 0, grip: 0.4 };
 
         try {
             parseURLParams();
@@ -196,7 +196,6 @@
             panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
         }
 
-        // 點擊介面外部時自動收合設定面板
         function setupClickOutsideToClose() {
             window.addEventListener('pointerdown', (e) => {
                 const panelContainer = document.getElementById('panel-container');
@@ -493,7 +492,7 @@
             return new THREE.Mesh(new THREE.BoxGeometry(boxSize, boxSize, boxSize), mats);
         }
 
-        function calculateVerticalIK(targetWorldPos) {
+        function calculateVerticalIK(targetWorldPos, alignTargetYaw = 0) {
             const localTarget = targetWorldPos.clone().sub(baseGroup.position);
             let baseAngle = Math.atan2(localTarget.x, localTarget.z);
             
@@ -516,10 +515,14 @@
 
             let angleShoulder = angleAlpha + angleBeta;
 
+            // 計算手腕補償旋轉（讓兩隻手指精準調整角度貼合字盒）
+            let wristYawAngle = alignTargetYaw - baseAngle;
+
             return {
                 base: baseAngle,
                 shoulder: (Math.PI / 2) - angleShoulder,
-                elbow: angleElbow
+                elbow: angleElbow,
+                wristYaw: wristYawAngle
             };
         }
 
@@ -576,10 +579,12 @@
                 stateTimer += dt;
                 const hoverPos = targetSourcePos.clone().add(new THREE.Vector3(0, 1.0, 0));
                 
-                let ik = calculateVerticalIK(hoverPos);
+                // 計算夾取角度補償 (讓手指旋轉與字盒夾角平行)
+                let ik = calculateVerticalIK(hoverPos, 0);
                 targetPose.base = ik.base;
                 targetPose.shoulder = ik.shoulder;
                 targetPose.elbow = ik.elbow;
+                targetPose.wristYaw = ik.wristYaw;
                 targetPose.grip = 0.4;
 
                 if (stateTimer > 0.6) {
@@ -591,10 +596,11 @@
                 stateTimer += dt;
                 const descendPos = targetSourcePos.clone().add(new THREE.Vector3(0, boxSize / 2, 0));
                 
-                let ik = calculateVerticalIK(descendPos);
+                let ik = calculateVerticalIK(descendPos, 0);
                 targetPose.base = ik.base;
                 targetPose.shoulder = ik.shoulder;
                 targetPose.elbow = ik.elbow;
+                targetPose.wristYaw = ik.wristYaw;
                 targetPose.grip = 0.4;
 
                 if (stateTimer > 0.5) {
@@ -631,10 +637,11 @@
                 }
 
                 let finalBeltTarget = new THREE.Vector3(targetBeltX + beltOffsetWorldX, 0.3, -1.0);
-                let ik = calculateVerticalIK(finalBeltTarget);
+                let ik = calculateVerticalIK(finalBeltTarget, 0);
                 targetPose.base = ik.base;
                 targetPose.shoulder = ik.shoulder;
                 targetPose.elbow = ik.elbow;
+                targetPose.wristYaw = ik.wristYaw;
 
                 if (stateTimer > 0.9) {
                     stateTimer = 0;
@@ -644,10 +651,11 @@
             else if (state === 'DESCEND_TO_BELT') {
                 stateTimer += dt;
                 let dropTarget = new THREE.Vector3(targetBeltX + beltOffsetWorldX, -0.65, -1.0);
-                let ik = calculateVerticalIK(dropTarget);
+                let ik = calculateVerticalIK(dropTarget, 0);
                 targetPose.base = ik.base;
                 targetPose.shoulder = ik.shoulder;
                 targetPose.elbow = ik.elbow;
+                targetPose.wristYaw = ik.wristYaw;
 
                 if (stateTimer > 0.5) {
                     stateTimer = 0;
@@ -672,6 +680,7 @@
                     targetPose.base = 0;
                     targetPose.shoulder = -0.2;
                     targetPose.elbow = 0.8;
+                    targetPose.wristYaw = 0;
 
                     stateTimer = 0;
                     currentCharIndex++;
@@ -717,13 +726,16 @@
             armPose.base = THREE.MathUtils.lerp(armPose.base, targetPose.base, 0.12);
             armPose.shoulder = THREE.MathUtils.lerp(armPose.shoulder, targetPose.shoulder, 0.12);
             armPose.elbow = THREE.MathUtils.lerp(armPose.elbow, targetPose.elbow, 0.12);
+            armPose.wristYaw = THREE.MathUtils.lerp(armPose.wristYaw, targetPose.wristYaw, 0.12);
             armPose.grip = THREE.MathUtils.lerp(armPose.grip, targetPose.grip, 0.12);
 
             baseGroup.rotation.y = armPose.base;
             shoulderGroup.rotation.x = armPose.shoulder;
             elbowGroup.rotation.x = armPose.elbow;
             
+            // X軸旋轉確保夾爪水平面向地面，Y軸旋轉讓手指動態轉向精準貼合字盒
             gripperGroup.rotation.x = - (armPose.shoulder + armPose.elbow) + 0.05;
+            gripperGroup.rotation.y = armPose.wristYaw;
 
             leftFinger.position.x = -armPose.grip;
             rightFinger.position.x = armPose.grip;
