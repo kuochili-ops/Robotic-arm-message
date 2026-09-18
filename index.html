@@ -128,6 +128,20 @@
         #share-btn { background: #28a745; color: white; }
         #record-btn { background: #dc3545; color: white; width: 100%; }
         #record-btn.recording { background: #ffc107; color: black; }
+
+        /* 動態複製註明提示框 */
+        #copy-toast {
+            display: none;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: rgba(40, 167, 69, 0.25);
+            border: 1.5px solid #28a745;
+            color: #28a745;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -151,6 +165,8 @@
                 <button id="apply-btn" onclick="applySettings()">套用設定</button>
                 <button id="share-btn" onclick="shareURL()">分享 URL</button>
             </div>
+            <div id="copy-toast">✅ 已成功複製分享 URL 至剪貼簿！</div>
+
             <div class="btn-group">
                 <button id="record-btn" onclick="toggleRecording()">🎥 開始自動錄影</button>
             </div>
@@ -260,6 +276,17 @@
             state = 'INIT_LINE';
         }
 
+        // 顯示動態複製成功註明
+        function showCopyToast(msg) {
+            const toast = document.getElementById('copy-toast');
+            if (msg) toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // 強化版 URL 分享與全設備剪貼簿自動複製機制（帶註明提示）
         function shareURL() {
             const data = {
                 lines: textLines,
@@ -269,17 +296,39 @@
             const encoded = encodeURIComponent(btoa(JSON.stringify(data)));
             const shareableURL = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
             
-            navigator.clipboard.writeText(shareableURL).then(() => {
-                alert('已成功複製分享網址至剪貼簿！');
-            }).catch(() => {
-                prompt('請手動複製以下網址：', shareableURL);
-            });
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(shareableURL).then(() => {
+                    showCopyToast('✅ 已成功複製分享 URL 至剪貼簿！');
+                }).catch(() => {
+                    fallbackCopyText(shareableURL);
+                });
+            } else {
+                fallbackCopyText(shareableURL);
+            }
+        }
+
+        // 備用複製機制
+        function fallbackCopyText(text) {
+            const tempArea = document.createElement('textarea');
+            tempArea.value = text;
+            tempArea.style.position = 'fixed';
+            tempArea.style.left = '-9999px';
+            document.body.appendChild(tempArea);
+            tempArea.focus();
+            tempArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showCopyToast('✅ 已成功複製分享 URL 至剪貼簿！');
+            } catch (err) {
+                prompt('請手動複製以下網址：', text);
+            }
+            document.body.removeChild(tempArea);
         }
 
         function toggleRecording() {
             const btn = document.getElementById('record-btn');
             if (!isRecording) {
-                // 重置從第一行重新開始，確保完整錄下整個過程
                 applySettings();
                 startRecording();
                 btn.innerText = '⏹️ 錄影中 (完成自動下載)';
@@ -713,11 +762,10 @@
             }
             else if (state === 'HOLD') {
                 stateTimer += dt;
-                if (stateTimer >= 1.0) { // 展現 1 秒後
+                if (stateTimer >= 1.0) {
                     stateTimer = 0;
                     state = 'CONVEYOR';
 
-                    // 【核心功能】：若正在錄影且這是最後一行文字，在此刻（顯示完成後一秒）自動停止並下載檔！
                     if (isRecording && currentLineIndex === textLines.length - 1) {
                         stopRecording();
                     }
