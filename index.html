@@ -270,7 +270,6 @@
             });
         }
 
-        // 解析 URL 參數 (採用安全的 encodeURIComponent)
         function parseURLParams() {
             const params = new URLSearchParams(window.location.search);
             if (params.has('msg')) {
@@ -304,7 +303,6 @@
             state = 'INIT_LINE';
         }
 
-        // 產生安全的分享 URL
         function generateShareURL() {
             const rawText = document.getElementById('text-input').value;
             const fontVal = document.getElementById('font-select').value;
@@ -322,10 +320,9 @@
             urlInput.value = shareableURL;
             copyStatus.style.display = 'none';
 
-            copyShareInput(); // 自動複製
+            copyShareInput();
         }
 
-        // 強效一鍵複製按鈕邏輯
         function copyShareInput() {
             const urlInput = document.getElementById('share-url-input');
             const copyStatus = document.getElementById('copy-status');
@@ -732,8 +729,9 @@
                     }
                 }
 
-                let finalBeltTarget = new THREE.Vector3(targetBeltX + beltOffsetWorldX, 0.3, -1.0);
-                let ik = calculateVerticalIK(finalBeltTarget, 0);
+                // 【關鍵修正】：平移至輸送帶上方「兩個字盒高度」(Y = 0.0，約高於輸送帶表面 +1.0 單位)
+                let highBeltTarget = new THREE.Vector3(targetBeltX + beltOffsetWorldX, 0.0, -1.0);
+                let ik = calculateVerticalIK(highBeltTarget, 0);
                 targetPose.base = ik.base;
                 targetPose.shoulder = ik.shoulder;
                 targetPose.elbow = ik.elbow;
@@ -746,6 +744,7 @@
             }
             else if (state === 'DESCEND_TO_BELT') {
                 stateTimer += dt;
+                // 從高處下降至接近輸送帶表面放置點 (Y = -0.65)
                 let dropTarget = new THREE.Vector3(targetBeltX + beltOffsetWorldX, -0.65, -1.0);
                 let ik = calculateVerticalIK(dropTarget, 0);
                 targetPose.base = ik.base;
@@ -760,8 +759,10 @@
             }
             else if (state === 'RELEASE') {
                 stateTimer += dt;
+                // 鬆開手指夾爪
                 targetPose.grip = 0.4;
 
+                // 字盒自然脫離夾爪落入輸送帶表面 (Y = -1.05)
                 if (stateTimer > 0.2 && activeBox && activeBox.parent === gripperGroup) {
                     gripperGroup.remove(activeBox);
                     scene.add(activeBox);
