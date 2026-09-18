@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>𓃥 白六機械手訊息傳遞</title>
-    <!-- 引入中文字型 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&family=Noto+Serif+TC:wght@900&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background: #111; font-family: 'Noto Sans TC', sans-serif; touch-action: none; }
@@ -49,7 +48,7 @@
             border-radius: 14px;
             width: 82vw;
             max-width: 340px;
-            max-height: 70vh;
+            max-height: 75vh;
             overflow-y: auto;
             margin-top: 10px;
             color: #fff;
@@ -77,7 +76,7 @@
             margin-top: 0;
         }
 
-        #panel textarea, #panel select, #panel input[type="color"] {
+        #panel textarea, #panel select, #panel input[type="color"], #share-url-input {
             width: 100%;
             margin-top: 6px;
             background: #222;
@@ -85,7 +84,7 @@
             border: 1.5px solid #555;
             border-radius: 8px;
             padding: 8px 10px;
-            font-size: 15px;
+            font-size: 14px;
             box-sizing: border-box;
             outline: none;
         }
@@ -129,17 +128,42 @@
         #record-btn { background: #dc3545; color: white; width: 100%; }
         #record-btn.recording { background: #ffc107; color: black; }
 
-        #copy-toast {
+        /* 分享網址專區 */
+        #share-section {
             display: none;
-            margin-top: 10px;
-            padding: 8px 12px;
-            background: rgba(40, 167, 69, 0.25);
-            border: 1.5px solid #28a745;
-            color: #28a745;
-            border-radius: 8px;
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(0, 255, 255, 0.08);
+            border: 1.5px dashed #0ff;
+            border-radius: 10px;
+        }
+
+        #share-section label {
+            margin-top: 0;
+            color: #0ff;
+            font-size: 13px;
+        }
+
+        #copy-action-btn {
+            margin-top: 8px;
+            width: 100%;
+            padding: 8px;
+            background: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
             font-size: 14px;
+        }
+
+        #copy-status {
+            display: none;
+            color: #28a745;
+            font-size: 12px;
             font-weight: bold;
             text-align: center;
+            margin-top: 6px;
         }
     </style>
 </head>
@@ -162,9 +186,15 @@
 
             <div class="btn-group">
                 <button id="apply-btn" onclick="applySettings()">套用設定</button>
-                <button id="share-btn" onclick="shareURL()">分享 URL</button>
+                <button id="share-btn" onclick="generateShareURL()">產生分享網址</button>
             </div>
-            <div id="copy-toast">✅ 已成功複製分享 URL 至剪貼簿！</div>
+
+            <div id="share-section">
+                <label>已生成專屬 URL (可點選或複製)：</label>
+                <input type="text" id="share-url-input" readonly onclick="this.select()">
+                <button id="copy-action-btn" onclick="copyShareInput()">📋 複製網址</button>
+                <div id="copy-status">✅ 已複製到剪貼簿！</div>
+            </div>
 
             <div class="btn-group">
                 <button id="record-btn" onclick="toggleRecording()">🎥 開始自動錄影</button>
@@ -275,17 +305,8 @@
             state = 'INIT_LINE';
         }
 
-        function showCopyToast(msg) {
-            const toast = document.getElementById('copy-toast');
-            if (msg) toast.innerText = msg;
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
-        }
-
-        // 雙重保障分享 URL：自動複製 + 彈出對話框輔助
-        function shareURL() {
+        // 產生分享 URL 並展開專屬文字複製框
+        function generateShareURL() {
             const data = {
                 lines: textLines,
                 font: selectedFont,
@@ -294,13 +315,45 @@
             const encoded = encodeURIComponent(btoa(JSON.stringify(data)));
             const shareableURL = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
             
-            // 嘗試剪貼簿 API 複製
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(shareableURL).catch(() => {});
-            }
+            const shareSection = document.getElementById('share-section');
+            const urlInput = document.getElementById('share-url-input');
+            const copyStatus = document.getElementById('copy-status');
+            
+            urlInput.value = shareableURL;
+            shareSection.style.display = 'block';
+            copyStatus.style.display = 'none';
+            
+            urlInput.focus();
+            urlInput.select();
 
-            showCopyToast('✅ 已產生 URL！請複製下方框內網址：');
-            prompt('請長按或點擊複製以下分享網址：', shareableURL);
+            // 嘗試剪貼簿自動複製
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(shareableURL).then(() => {
+                    copyStatus.style.display = 'block';
+                }).catch(() => {});
+            }
+        }
+
+        // 點擊複製按鈕觸發
+        function copyShareInput() {
+            const urlInput = document.getElementById('share-url-input');
+            const copyStatus = document.getElementById('copy-status');
+            
+            urlInput.select();
+            urlInput.setSelectionRange(0, 99999); // 針對手機 Safari
+
+            try {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(urlInput.value).then(() => {
+                        copyStatus.style.display = 'block';
+                    });
+                } else {
+                    document.execCommand('copy');
+                    copyStatus.style.display = 'block';
+                }
+            } catch (err) {
+                alert('請手動長按框內文字進行複製');
+            }
         }
 
         function toggleRecording() {
