@@ -129,7 +129,6 @@
         #record-btn { background: #dc3545; color: white; width: 100%; }
         #record-btn.recording { background: #ffc107; color: black; }
 
-        /* 動態複製註明提示框 */
         #copy-toast {
             display: none;
             margin-top: 10px;
@@ -276,7 +275,6 @@
             state = 'INIT_LINE';
         }
 
-        // 顯示動態複製成功註明
         function showCopyToast(msg) {
             const toast = document.getElementById('copy-toast');
             if (msg) toast.innerText = msg;
@@ -286,7 +284,7 @@
             }, 3000);
         }
 
-        // 強化版 URL 分享與全設備剪貼簿自動複製機制（帶註明提示）
+        // 雙重保障分享 URL：自動複製 + 彈出對話框輔助
         function shareURL() {
             const data = {
                 lines: textLines,
@@ -296,34 +294,13 @@
             const encoded = encodeURIComponent(btoa(JSON.stringify(data)));
             const shareableURL = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
             
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(shareableURL).then(() => {
-                    showCopyToast('✅ 已成功複製分享 URL 至剪貼簿！');
-                }).catch(() => {
-                    fallbackCopyText(shareableURL);
-                });
-            } else {
-                fallbackCopyText(shareableURL);
+            // 嘗試剪貼簿 API 複製
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(shareableURL).catch(() => {});
             }
-        }
 
-        // 備用複製機制
-        function fallbackCopyText(text) {
-            const tempArea = document.createElement('textarea');
-            tempArea.value = text;
-            tempArea.style.position = 'fixed';
-            tempArea.style.left = '-9999px';
-            document.body.appendChild(tempArea);
-            tempArea.focus();
-            tempArea.select();
-            
-            try {
-                document.execCommand('copy');
-                showCopyToast('✅ 已成功複製分享 URL 至剪貼簿！');
-            } catch (err) {
-                prompt('請手動複製以下網址：', text);
-            }
-            document.body.removeChild(tempArea);
+            showCopyToast('✅ 已產生 URL！請複製下方框內網址：');
+            prompt('請長按或點擊複製以下分享網址：', shareableURL);
         }
 
         function toggleRecording() {
