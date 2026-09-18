@@ -729,8 +729,8 @@
                     }
                 }
 
-                // 【關鍵修正】：平移至輸送帶上方「兩個字盒高度」(Y = 0.0，約高於輸送帶表面 +1.0 單位)
-                let highBeltTarget = new THREE.Vector3(targetBeltX + beltOffsetWorldX, 0.0, -1.0);
+                // 【精準正上方與高處定位】：Z = 0.0 (輸送帶正上方中心軸)，Y = 0.0 (高於輸送帶表面 2 個字盒高度)
+                let highBeltTarget = new THREE.Vector3(targetBeltX + beltOffsetWorldX, 0.0, 0.0);
                 let ik = calculateVerticalIK(highBeltTarget, 0);
                 targetPose.base = ik.base;
                 targetPose.shoulder = ik.shoulder;
@@ -744,8 +744,8 @@
             }
             else if (state === 'DESCEND_TO_BELT') {
                 stateTimer += dt;
-                // 從高處下降至接近輸送帶表面放置點 (Y = -0.65)
-                let dropTarget = new THREE.Vector3(targetBeltX + beltOffsetWorldX, -0.65, -1.0);
+                // 從高處垂直下降至輸送帶正上方表面放置點 (Z = 0.0, Y = -0.65)
+                let dropTarget = new THREE.Vector3(targetBeltX + beltOffsetWorldX, -0.65, 0.0);
                 let ik = calculateVerticalIK(dropTarget, 0);
                 targetPose.base = ik.base;
                 targetPose.shoulder = ik.shoulder;
@@ -759,10 +759,9 @@
             }
             else if (state === 'RELEASE') {
                 stateTimer += dt;
-                // 鬆開手指夾爪
                 targetPose.grip = 0.4;
 
-                // 字盒自然脫離夾爪落入輸送帶表面 (Y = -1.05)
+                // 鬆開夾爪，字盒落入輸送帶正上方指定位置 (Z = 0.0, Y = -1.05)
                 if (stateTimer > 0.2 && activeBox && activeBox.parent === gripperGroup) {
                     gripperGroup.remove(activeBox);
                     scene.add(activeBox);
