@@ -130,7 +130,6 @@
 
         /* 分享網址專區 */
         #share-section {
-            display: none;
             margin-top: 12px;
             padding: 10px;
             background: rgba(0, 255, 255, 0.08);
@@ -147,23 +146,23 @@
         #copy-action-btn {
             margin-top: 8px;
             width: 100%;
-            padding: 8px;
-            background: #28a745;
+            padding: 10px;
+            background: #e67e22;
             color: #fff;
             border: none;
             border-radius: 6px;
             font-weight: bold;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 15px;
         }
 
         #copy-status {
             display: none;
-            color: #28a745;
-            font-size: 12px;
+            color: #2ecc71;
+            font-size: 14px;
             font-weight: bold;
             text-align: center;
-            margin-top: 6px;
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -190,10 +189,10 @@
             </div>
 
             <div id="share-section">
-                <label>已生成專屬 URL (可點選或複製)：</label>
+                <label>分享 URL (點擊即全選)：</label>
                 <input type="text" id="share-url-input" readonly onclick="this.select()">
-                <button id="copy-action-btn" onclick="copyShareInput()">📋 複製網址</button>
-                <div id="copy-status">✅ 已複製到剪貼簿！</div>
+                <button id="copy-action-btn" onclick="copyShareInput()">📋 一鍵複製網址</button>
+                <div id="copy-status">✅ 已成功複製到剪貼簿！</div>
             </div>
 
             <div class="btn-group">
@@ -271,21 +270,21 @@
             });
         }
 
+        // 解析 URL 參數 (採用安全的 encodeURIComponent)
         function parseURLParams() {
             const params = new URLSearchParams(window.location.search);
-            if (params.has('data')) {
+            if (params.has('msg')) {
                 try {
-                    const data = JSON.parse(atob(decodeURIComponent(params.get('data'))));
-                    if (data.lines) {
-                        textLines = data.lines;
-                        document.getElementById('text-input').value = textLines.join('\n');
-                    }
-                    if (data.font) {
-                        selectedFont = data.font;
+                    const msgText = decodeURIComponent(params.get('msg'));
+                    textLines = msgText.split('\n').filter(l => l.trim() !== '');
+                    document.getElementById('text-input').value = textLines.join('\n');
+
+                    if (params.has('font')) {
+                        selectedFont = decodeURIComponent(params.get('font'));
                         document.getElementById('font-select').value = selectedFont;
                     }
-                    if (data.color) {
-                        selectedColor = data.color;
+                    if (params.has('color')) {
+                        selectedColor = decodeURIComponent(params.get('color'));
                         document.getElementById('color-picker').value = selectedColor;
                     }
                 } catch(e) { console.error('URL 解析失敗', e); }
@@ -305,45 +304,43 @@
             state = 'INIT_LINE';
         }
 
-        // 產生分享 URL 並展開專屬文字複製框
+        // 產生安全的分享 URL
         function generateShareURL() {
-            const data = {
-                lines: textLines,
-                font: selectedFont,
-                color: selectedColor
-            };
-            const encoded = encodeURIComponent(btoa(JSON.stringify(data)));
-            const shareableURL = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
-            
-            const shareSection = document.getElementById('share-section');
+            const rawText = document.getElementById('text-input').value;
+            const fontVal = document.getElementById('font-select').value;
+            const colorVal = document.getElementById('color-picker').value;
+
+            const url = new URL(window.location.href.split('?')[0]);
+            url.searchParams.set('msg', encodeURIComponent(rawText));
+            url.searchParams.set('font', encodeURIComponent(fontVal));
+            url.searchParams.set('color', encodeURIComponent(colorVal));
+
+            const shareableURL = url.toString();
             const urlInput = document.getElementById('share-url-input');
             const copyStatus = document.getElementById('copy-status');
             
             urlInput.value = shareableURL;
-            shareSection.style.display = 'block';
             copyStatus.style.display = 'none';
-            
-            urlInput.focus();
-            urlInput.select();
 
-            // 嘗試剪貼簿自動複製
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(shareableURL).then(() => {
-                    copyStatus.style.display = 'block';
-                }).catch(() => {});
-            }
+            copyShareInput(); // 自動複製
         }
 
-        // 點擊複製按鈕觸發
+        // 強效一鍵複製按鈕邏輯
         function copyShareInput() {
             const urlInput = document.getElementById('share-url-input');
             const copyStatus = document.getElementById('copy-status');
-            
+
+            if (!urlInput.value) {
+                generateShareURL();
+                return;
+            }
+
+            urlInput.focus();
             urlInput.select();
-            urlInput.setSelectionRange(0, 99999); // 針對手機 Safari
+            urlInput.setSelectionRange(0, 99999);
 
             try {
-                if (navigator.clipboard) {
+                if (navigator.clipboard && window.isSecureContext) {
                     navigator.clipboard.writeText(urlInput.value).then(() => {
                         copyStatus.style.display = 'block';
                     });
@@ -352,7 +349,8 @@
                     copyStatus.style.display = 'block';
                 }
             } catch (err) {
-                alert('請手動長按框內文字進行複製');
+                copyStatus.innerText = "❌ 請長按輸入框複製";
+                copyStatus.style.display = 'block';
             }
         }
 
